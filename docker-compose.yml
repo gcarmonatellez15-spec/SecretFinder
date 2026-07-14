@@ -1,0 +1,66 @@
+version: '3.9'
+
+services:
+  secretfinder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - secretfinder:latest
+    image: secretfinder:1.0.0
+    container_name: secretfinder
+    
+    # Security configurations
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE  # Only if needed for network operations
+    
+    read_only_root_filesystem: true
+    
+    # Resource limits
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: '1.0'
+    
+    # Volumes
+    volumes:
+      - ./output:/output:rw
+      - ./targets.txt:/targets.txt:ro
+      - /tmp:/tmp  # For temporary files
+    
+    # Environment
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Uncomment only for testing with self-signed certs:
+      # - PYTHONHTTPSVERIFY=0
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Logging
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Entrypoint override (example: scan a single URL)
+    # entrypoint: ["/usr/local/bin/SecretFinder.py", "-i", "http://example.com", "-o", "/output/result.html"]
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "SecretFinder.py", "-h"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+# Example: Run with specific targets
+# 
+# Usage:
+#   docker-compose up
+#   docker-compose exec secretfinder SecretFinder.py -i http://target.com -o /output/result.html
+#   docker-compose down
